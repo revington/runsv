@@ -1,0 +1,23 @@
+{
+    "name": "runsv",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "directories": {
+        "test": "test"
+    },
+    "scripts": {
+        "test": "nyc --reporter=html  mocha  --bail --timeout 10000 --check-leaks test",
+        "test-ci": "nyc mocha test  --timeout 10000  --check-leaks "
+    },
+    "keywords": [],
+    "author": "Pedro Narciso García Revington <p.revington@gmail.com> (https://github.com/revington)",
+    "license": "MIT",
+    "dependencies": {
+        "dependency-graph": "^0.9.0"
+    },
+    "devDependencies": {
+        "mocha": "^8.0.1",
+        "nyc": "^15.1.0"
+    }
+}
