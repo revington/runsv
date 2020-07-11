@@ -38,7 +38,7 @@ SV.prototype.addService = function addServiceImpl(service, ...dependencies) {
     }
 };
 SV.prototype.getService = function getService(name) {
-    return self.services[name];
+    return this.services[name];
 };
 SV.prototype.init = function init(callback = noop) {
     var i = 0;
