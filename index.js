@@ -40,6 +40,15 @@ SV.prototype.addService = function addServiceImpl(service, ...dependencies) {
 SV.prototype.getService = function getService(name) {
     return this.services[name];
 };
+SV.prototype.getClients = function getClients(){
+    const self = this;
+    return Object.keys(self.services).reduce(function(acc, name){
+        if(self.services[name].getClient){
+            acc[name] = self.services[name].getClient(name);
+        }
+        return acc;
+    }, {});
+};
 SV.prototype.init = function init(callback = noop) {
     var i = 0;
     const self = this;
