@@ -8,7 +8,7 @@
 
 ### Service definition
 
-```
+```javascript
 // Redis service definition
 const name = 'redis';
 const redis = require('redis');
@@ -46,7 +46,7 @@ function create() {
 
 ### Service 
 
-```
+```javascript
 const runsv = require('runsv').create();
 // Require your defined services
 const pg = require('./pg-service')();
@@ -62,7 +62,7 @@ services.init(function (err) {
 ```
 
 ### Service with dependencies
-```
+```javascript
 const runsv = require('runsv').create();
 // Require your defined services
 const a = require(...);
