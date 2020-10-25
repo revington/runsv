@@ -20,7 +20,7 @@ function createService (name, event) {
 		}
 	});
 }
-describe('SV', function () {
+describe('RunSV', function () {
 	describe('basic behavior', function () {
 		before('setup and run', function (done) {
 			const self = this;

@@ -15,13 +15,13 @@ function isValidService (input) {
 	assert.deepStrictEqual(typeof input.stop, 'function', `${name} #stop must be a function`);
 }
 
-function SV () {
+function RunSV () {
 	this.services = new Map();
 	this.dependencies = new DepGraph();
 	EventEmitter.call(this);
 }
-util.inherits(SV, EventEmitter);
-SV.prototype.addService = function addServiceImpl (service, ...dependencies) {
+util.inherits(RunSV, EventEmitter);
+RunSV.prototype.addService = function addServiceImpl (service, ...dependencies) {
 	var self = this;
 	for (const s of [service, ...dependencies]) {
 		isValidService(s);
@@ -35,14 +35,14 @@ SV.prototype.addService = function addServiceImpl (service, ...dependencies) {
 		self.dependencies.addDependency(service.name, dep.name);
 	}
 };
-SV.prototype.getService = function getService (name) {
+RunSV.prototype.getService = function getService (name) {
 	assert(!!name, 'service name is required');
 	return this.services.get(name);
 };
-SV.prototype.listServices = function listServices () {
+RunSV.prototype.listServices = function listServices () {
 	return Array.from(this.services.keys());
 };
-SV.prototype.getClients = function getClients (...only) {
+RunSV.prototype.getClients = function getClients (...only) {
 	const ret = {};
 	const names = (only.length && only) || Array.from(this.services.keys());
 	// populate the result with existing clients
@@ -54,7 +54,7 @@ SV.prototype.getClients = function getClients (...only) {
 	}
 	return ret;
 };
-SV.prototype.init = function init (callback) {
+RunSV.prototype.init = function init (callback) {
 	var i = 0;
 	const self = this;
 	assert(callback, 'callback is required');
@@ -84,7 +84,7 @@ SV.prototype.init = function init (callback) {
 	}
 	next();
 };
-SV.prototype.stop = function stop (callback) {
+RunSV.prototype.stop = function stop (callback) {
 	var i = 0;
 	const self = this;
 	assert(callback, 'callback is required');
@@ -104,7 +104,7 @@ SV.prototype.stop = function stop (callback) {
 };
 
 function create () {
-	return new SV();
+	return new RunSV();
 }
 exports = module.exports = {
 	create
