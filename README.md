@@ -2,11 +2,57 @@
 [![Known Vulnerabilities](https://snyk.io/test/github/revington/runsv/badge.svg?targetFile=package.json)](https://snyk.io/test/github/revington/runsv?targetFile=package.json)
 [![Coverage Status](https://coveralls.io/repos/github/revington/runsv/badge.svg?branch=master)](https://coveralls.io/github/revington/runsv?branch=master)
 
+# A Node.js service manager
 
+>Define and orchestrate your application services
+Most applications rely in one or more databases, workers, APIs, etc. You want to start your application once those services are available. Also, you want to disconnect to them in reverse order. This module prodvides that functionality.
+Lets see an example:  
 
-## Usage
+Your express application is connected to Redis and PostgreSQL. You want to start your application *after* those connections are ready. When your application receives the `SIGTERM` signal you want to:
 
-### Service definition
+1. Stop accepting new requests nor connections
+2. Handle current requests
+3. Finnish connections
+4. Disconnect from Redis and PostgreSQL
+5. Exit
+
+With `runsv` that strategy could be defined as:
+
+```javascript
+const http = require('http');
+const runsv = require('runsv').create();
+const req = http.IncomingMessage.prototype;
+// Require your defined services
+const pg = require('./lib/pg-service');
+const redis = require('./lib/redis-service');
+const app = require('./app');
+// add them to runsv
+runsv.addService(pg);
+runsv.addService(redis);
+runsv.addService(app, pg, redis); // app requires pg and redis
+// start your services and wait until ready
+runsv.init(function (err) {
+    if(err){
+        // deal with it...
+    }
+    process.once('SIGTERM', function(){
+        runsv.stop();
+    });
+});
+```
+
+`runsv` will create a dependency graph and start them in the correct order. Services will stop in reverse order.  
+Services with dependencies on another services will have access to them at `start` time. See services definition below.
+
+## Service definition
+
+A service is just and object with:  
+
+* `name` Service name. A string.
+* `start (dependencies, callback)` Start function.
+* `stop (callback)` Stop function.
+* [OPTIONAL] `getClient()` Return a client if the service exposes one i.e a database client.
+
 
 ```javascript
 // Redis service definition
@@ -16,7 +62,7 @@ const redis = require('redis');
 function create() {
     var client;
 
-    function start(_, callback) {
+    function start(dependencies, callback) {
         if (client) {
             throw new Error('already connected');
         }
@@ -43,40 +89,19 @@ function create() {
 }
 ```
 
+Service more examples:
 
-### Service 
+* [CouchDB](/examples/couchdb-service.js)
+* [PostgreSQL](/examples/pg-service.js)
+* [Redis](/examples/redis-service.js)
+* [ElasticSearch](/examples/es-service.js)
 
-```javascript
-const runsv = require('runsv').create();
-// Require your defined services
-const pg = require('./pg-service')();
-const redis = require('./redis-service')();
-// add them to runsv
-runsv.addService(pg);
-runsv.addService(redis);
-// start your services and wait until ready
-services.init(function (err) {
-    // Ok, all services ready
-    const {pg, redis} = services.getClients();
-});
-```
 
-### Service with dependencies
-```javascript
-const runsv = require('runsv').create();
-// Require your defined services
-const a = require(...);
-const b = require(...);
-const c = require(...);
-// service b depends on a
-runsv.addService(b, a);
-// service c depends on b
-runsv.addService(c, b);
+## API
 
-services.init(function (err) {
-    // start order:
-    // #1 a
-    // #2 b
-    // #3 c
-});
-```
+* `getService(name)` Get a service by its name.
+* `addService(service, [...dependencies])` Adds a service with optional dependencies.
+* `listServices()` Gets a list of services i.e `['pg', 'redis']`.
+* `getClients(...only)` Get a bunch of clients, If no client is specified it returns all clients.
+* `init(callback)` Start all services.
+* `stop(callback)` Stop all services.

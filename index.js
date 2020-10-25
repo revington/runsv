@@ -1,99 +1,111 @@
 'use strict';
 const {
-    DepGraph
+	DepGraph
 } = require('dependency-graph');
 const EventEmitter = require('events');
 const util = require('util');
 const assert = require('assert');
 
-function noop() {}
-
-function isValidService(input) {
-    assert(input.name, 'service must have a #name');
-    const name = input.name;
-    assert(input.start, `service ${name} must have a #start(getService, callback) function`);
-    assert(input.stop, `service ${name} must have a #stop function`);
-    assert.deepStrictEqual(typeof input.start, `function`, `${name} #start must be a function`);
-    assert.deepStrictEqual(typeof input.stop, `function`, `${name} #stop must be a function`);
+function isValidService (input) {
+	assert(input.name, 'service must have a #name');
+	const name = input.name;
+	assert(input.start, `service ${name} must have a #start(getService, callback) function`);
+	assert(input.stop, `service ${name} must have a #stop function`);
+	assert.deepStrictEqual(typeof input.start, 'function', `${name} #start must be a function`);
+	assert.deepStrictEqual(typeof input.stop, 'function', `${name} #stop must be a function`);
 }
 
-function SV() {
-    this.services = {};
-    this.dependencies = new DepGraph();
-    EventEmitter.call(this);
+function SV () {
+	this.services = new Map();
+	this.dependencies = new DepGraph();
+	EventEmitter.call(this);
 }
 util.inherits(SV, EventEmitter);
-SV.prototype.addService = function addServiceImpl(service, ...dependencies) {
-    var self = this;
-    for (let s of [service, ...dependencies]) {
-        isValidService(s);
-        if (self.services[s.name]) {
-            break;
-        }
-        self.services[s.name] = s;
-        self.dependencies.addNode(s.name);
-    }
-    for (let dep of dependencies) {
-        self.dependencies.addDependency(service.name, dep.name);
-    }
+SV.prototype.addService = function addServiceImpl (service, ...dependencies) {
+	var self = this;
+	for (const s of [service, ...dependencies]) {
+		isValidService(s);
+		if (self.services.has(s.name)) {
+			break;
+		}
+		self.services.set(s.name, s);
+		self.dependencies.addNode(s.name);
+	}
+	for (const dep of dependencies) {
+		self.dependencies.addDependency(service.name, dep.name);
+	}
 };
-SV.prototype.getService = function getService(name) {
-    return this.services[name];
+SV.prototype.getService = function getService (name) {
+	assert(!!name, 'service name is required');
+	return this.services.get(name);
 };
-SV.prototype.getClients = function getClients(){
-    const self = this;
-    return Object.keys(self.services).reduce(function(acc, name){
-        if(self.services[name].getClient){
-            acc[name] = self.services[name].getClient(name);
-        }
-        return acc;
-    }, {});
+SV.prototype.listServices = function listServices () {
+	return Array.from(this.services.keys());
 };
-SV.prototype.init = function init(callback = noop) {
-    var i = 0;
-    const self = this;
-    const plan = self.dependencies.overallOrder();
+SV.prototype.getClients = function getClients (...only) {
+	const ret = {};
+	const names = (only.length && only) || Array.from(this.services.keys());
+	// populate the result with existing clients
+	for (const n of names) {
+		const service = this.services.get(n);
+		if (service.getClient) {
+			ret[n] = service.getClient();
+		}
+	}
+	return ret;
+};
+SV.prototype.init = function init (callback) {
+	var i = 0;
+	const self = this;
+	assert(callback, 'callback is required');
+	let plan;
+	try {
+		plan = self.dependencies.overallOrder();
+	} catch (e) {
+		// typically a circular dependency
+		return callback(e);
+	}
 
-    function next(err) {
-        const name = plan[i++];
-        if (err) {
-            return callback(err);
-        }
-        if (!name) {
-            return callback();
-        }
-        const service = self.services[name];
-        if (service.on) {
-            // bubble up error events
-            service.on('error', function (...args) {
-                self.emit(ev, ...args, service.name);
-            });
-        }
-        service.start(self.getService, next);
-    }
-    next();
-}
-SV.prototype.stop = function stop(callback = noop) {
-    var i = 0;
-    const self = this;
-    const plan = self.dependencies.overallOrder().reverse(); // stop the services in reverse order
+	function next (err) {
+		if (err) {
+			return callback(err);
+		}
+		const name = plan[i++];
+		if (!name) {
+			return callback();
+		}
+		const service = self.services.get(name);
+		const dependencies = self.dependencies.dependenciesOf(name);
+		if (dependencies.length) {
+			service.start(self.getClients(...dependencies), next);
+		} else {
+			service.start(null, next);
+		}
+	}
+	next();
+};
+SV.prototype.stop = function stop (callback) {
+	var i = 0;
+	const self = this;
+	assert(callback, 'callback is required');
+	const plan = self.dependencies.overallOrder().reverse(); // stop the services in reverse order
 
-    function next(err) {
-        var s = plan[i++];
-        if (err) {
-            return callback(err);
-        }
-        if (!s) {
-            return callback();
-        }
-        self.services[s].stop(next);
-    }
-    next();
-}
+	function next (err) {
+		var s = plan[i++];
+		if (err) {
+			return callback(err);
+		}
+		if (!s) {
+			return callback();
+		}
+		self.services.get(s).stop(next);
+	}
+	next();
+};
 
-function create() {
-    return new SV();
+function create () {
+	return new SV();
 }
 exports = module.exports = {
-    create
-}
+	create
+};
