@@ -89,7 +89,7 @@ function create() {
 }
 ```
 
-Service more examples:
+See more service examples:
 
 * [CouchDB](/examples/couchdb-service.js)
 * [PostgreSQL](/examples/pg-service.js)
