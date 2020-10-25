@@ -10,11 +10,11 @@ Lets see an example:
 
 Your express application is connected to Redis and PostgreSQL. You want to start your application *after* those connections are ready. When your application receives the `SIGTERM` signal you want to:
 
-1. Stop accepting new requests nor connections
-2. Handle current requests
-3. Finnish connections
+1. Stop accepting new connections and requests
+2. Wait until current requests finish
+3. Close any HTTP connections
 4. Disconnect from Redis and PostgreSQL
-5. Exit
+5. Exit process
 
 With `runsv` that strategy could be defined as:
 
