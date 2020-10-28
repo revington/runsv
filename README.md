@@ -2,9 +2,9 @@
 [![Known Vulnerabilities](https://snyk.io/test/github/revington/runsv/badge.svg?targetFile=package.json)](https://snyk.io/test/github/revington/runsv?targetFile=package.json)
 [![Coverage Status](https://coveralls.io/repos/github/revington/runsv/badge.svg?branch=master)](https://coveralls.io/github/revington/runsv?branch=master)
 
-# A Node.js service manager
+# runsv A Node.js service manager
 
->Define and orchestrate your application services
+Define and orchestrate your application services
 Most applications rely in one or more databases, workers, APIs, etc. You want to start your application once those services are available. Also, you want to disconnect to them in reverse order. This module prodvides that functionality.
 Lets see an example:  
 
