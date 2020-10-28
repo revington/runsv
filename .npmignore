@@ -1,0 +1,7 @@
+test
+.eslintrc.js
+examples
+coverage
+.nyc_output
+.travis
+.travis.yml
