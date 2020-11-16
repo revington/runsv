@@ -70,7 +70,14 @@ RunSV.prototype.init = function init (callback) {
 		if (err) {
 			return callback(err);
 		}
+		const previous = plan[i - 1];
+
+		if (previous) {
+			self.emit('start', previous);
+		}
+
 		const name = plan[i++];
+
 		if (!name) {
 			return callback();
 		}
@@ -91,14 +98,19 @@ RunSV.prototype.stop = function stop (callback) {
 	const plan = self.dependencies.overallOrder().reverse(); // stop the services in reverse order
 
 	function next (err) {
-		var s = plan[i++];
+		const previous = plan[i - 1];
+
+		if (previous) {
+			self.emit('stop', previous);
+		}
+		const name = plan[i++];
 		if (err) {
 			return callback(err);
 		}
-		if (!s) {
+		if (!name) {
 			return callback();
 		}
-		self.services.get(s).stop(next);
+		self.services.get(name).stop(next);
 	}
 	next();
 };
