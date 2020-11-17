@@ -33,7 +33,7 @@ describe('RunSV', function () {
 			self.myAsyncReadyService = myAsyncReadyService;
 			const sv = create();
 			sv.addService(myAsyncReadyService);
-			sv.init(function (err) {
+			sv.start(function (err) {
 				if (err) {
 					throw err;
 				}
@@ -47,11 +47,34 @@ describe('RunSV', function () {
 			assert(this.events.stopped);
 		});
 	});
+	describe('execution plan', function () {
+		before(function () {
+			const runsv = create();
+			const [a, b] =	['a', 'b'].map(name => createService(name));
+			runsv.addService(a);
+			runsv.addService(b, a);
+			this.runsv = runsv;
+		});
+		describe('#startPlan()', function () {
+			it('should return service start order', function () {
+				const actual = this.runsv.startPlan();
+				const expected = ['a', 'b'];
+				assert.deepStrictEqual(actual, expected);
+			});
+		});
+		describe('#stopPlan()', function () {
+			it('should return service start order', function () {
+				const actual = this.runsv.stopPlan();
+				const expected = ['b', 'a'];
+				assert.deepStrictEqual(actual, expected);
+			});
+		});
+	});
 	describe('#getClients([...only])', function () {
 		it('should return all clients', function (done) {
 			const sv = create();
 			['a', 'b'].forEach(x => sv.addService(createService(x)));
-			sv.init(function (err) {
+			sv.start(function (err) {
 				if (err) {
 					throw err;
 				}
@@ -65,7 +88,7 @@ describe('RunSV', function () {
 		it('when clients are specified it should only return those', function (done) {
 			const sv = create();
 			['a', 'b', 'c'].forEach(x => sv.addService(createService(x)));
-			sv.init(function (err) {
+			sv.start(function (err) {
 				if (err) {
 					throw err;
 				}
@@ -86,7 +109,7 @@ describe('RunSV', function () {
 			};
 			delete c.getClient;
 			sv.addService(c);
-			sv.init(function (err) {
+			sv.start(function (err) {
 				if (err) {
 					throw err;
 				}
@@ -120,16 +143,16 @@ describe('RunSV', function () {
 	describe('dependencies', function () {
 		before('setup and run', function (done) {
 			const self = this;
-			self.events = { started: [], stopped: [] };
-			const event = {
-				start (name, services) { self.events.started.push([name, services]); },
-				stop (name) { self.events.stopped.push(name); }
+			self.serviceEvents = { started: [], stopped: [] };
+			const serviceEvent = {
+				start (name, services) { self.serviceEvents.started.push([name, services]); },
+				stop (name) { self.serviceEvents.stopped.push(name); }
 			};
-			const [a, b] = ['a', 'b'].map(x => createService(x, event));
+			const [a, b] = ['a', 'b'].map(x => createService(x, serviceEvent));
 			const sv = create();
 			// B depends on A
 			sv.addService(b, a);
-			sv.init(function (err) {
+			sv.start(function (err) {
 				if (err) {
 					throw err;
 				}
@@ -137,10 +160,10 @@ describe('RunSV', function () {
 			});
 		});
 		it('should start a service with dependencies in the proper order', function () {
-			assert.deepStrictEqual(this.events.started.map(x => x[0]), ['a', 'b']);
+			assert.deepStrictEqual(this.serviceEvents.started.map(x => x[0]), ['a', 'b']);
 		});
 		it('should stop a service with dependencies in the proper order', function () {
-			assert.deepStrictEqual(this.events.stopped, ['b', 'a']);
+			assert.deepStrictEqual(this.serviceEvents.stopped, ['b', 'a']);
 		});
 		describe('A service with dependencies', function () {
 			it('should have access their clients', function () {
@@ -148,7 +171,7 @@ describe('RunSV', function () {
 					['a', null], // "a" receives no clients
 					['b', { a: { name: 'a' } }] // "b" should get access to client of "a"
 				];
-				assert.deepStrictEqual(this.events.started, expected);
+				assert.deepStrictEqual(this.serviceEvents.started, expected);
 			});
 		});
 		describe('Circular dependencies', function () {
@@ -157,29 +180,57 @@ describe('RunSV', function () {
 				const sv = create();
 				// B depends on A
 				sv.addService(a, a);
-				sv.init(function (err) {
+				sv.start(function (err) {
 					assert.deepStrictEqual(err.message, 'Dependency Cycle Found: a -> a');
 					done();
 				});
 			});
 			it('a -> b -> c -> a should fail', function (done) {
 				const self = this;
-				self.events = { started: [], stopped: [] };
-				const event = {
-					start (name, services) { self.events.started.push([name, services]); },
-					stop (name) { self.events.stopped.push(name); }
+				self.serviceEvents = { started: [], stopped: [] };
+				const serviceEvent = {
+					start (name, services) { self.serviceEvents.started.push([name, services]); },
+					stop (name) { self.serviceEvents.stopped.push(name); }
 				};
-				const [a, b, c] = ['a', 'b', 'c'].map(x => createService(x, event));
+				const [a, b, c] = ['a', 'b', 'c'].map(x => createService(x, serviceEvent));
 				const sv = create();
 				// B depends on A
 				sv.addService(a, b);
 				sv.addService(c, a);
 				sv.addService(b, c);
-				sv.init(function (err) {
+				sv.start(function (err) {
 					assert.deepStrictEqual(err.message, 'Dependency Cycle Found: a -> b -> c -> a');
 					done();
 				});
 			});
+		});
+	});
+	describe('Events', function () {
+		before(function (done) {
+			const self = this;
+			self.start = [];
+			self.stop = [];
+			const [a, b, c] = ['a', 'b', 'c'].map(x => createService(x));
+			const runsv = create();
+
+			runsv.addService(b, a);
+			runsv.addService(c, b);
+
+			runsv.on('start', name => self.start.push(name));
+			runsv.on('stop', name => self.stop.push(name));
+			runsv.start(function () {
+				runsv.stop(done);
+			});
+		});
+		it('should emit start events', function () {
+			const actual = this.start;
+			const expected = ['a', 'b', 'c'];
+			assert.deepStrictEqual(actual, expected);
+		});
+		it('should emit stop events', function () {
+			const actual = this.stop;
+			const expected = ['c', 'b', 'a'];
+			assert.deepStrictEqual(actual, expected);
 		});
 	});
 	describe('Errors', function () {
@@ -197,7 +248,7 @@ describe('RunSV', function () {
 			it('should callback that error', function (done) {
 				const sv = create();
 				sv.addService(service);
-				sv.init(function (err) {
+				sv.start(function (err) {
 					assert(err === expectedError);
 					done();
 				});
@@ -217,7 +268,7 @@ describe('RunSV', function () {
 			it('should callback that error', function (done) {
 				const sv = create();
 				sv.addService(service);
-				sv.init(function (err) {
+				sv.start(function (err) {
 					assert(!err, 'unexpected error');
 					sv.stop(function (err) {
 						assert(err === expectedError);

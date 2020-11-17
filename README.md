@@ -23,18 +23,24 @@ const http = require('http');
 const runsv = require('runsv').create();
 const req = http.IncomingMessage.prototype;
 // Require your defined services
-const pg = require('./lib/pg-service');
-const redis = require('./lib/redis-service');
+const pg = require('./lib/pg-service')();
+const redis = require('./lib/redis-service')();
 const app = require('./app');
 // add them to runsv
 runsv.addService(pg);
 runsv.addService(redis);
 runsv.addService(app, pg, redis); // app requires pg and redis
+
+runsv.on('start', service => console.log(service, 'ready'));
+runsv.on('stop', service => console.log(service, 'stopped'));
+
 // start your services and wait until ready
-runsv.init(function (err) {
+runsv.start(function (err) {
     if(err){
-        // deal with it...
+        // 
     }
+
+
     process.once('SIGTERM', function(){
         runsv.stop();
     });
@@ -87,6 +93,7 @@ function create() {
         getClient
     });
 }
+exports = module.exports = create;
 ```
 
 See more service examples:
@@ -103,5 +110,10 @@ See more service examples:
 * `addService(service, [...dependencies])` Adds a service with optional dependencies.
 * `listServices()` Gets a list of services i.e `['pg', 'redis']`.
 * `getClients(...only)` Get a bunch of clients, If no client is specified it returns all clients.
-* `init(callback)` Start all services.
+* `start(callback)` Start all services.
 * `stop(callback)` Stop all services.
+* `init(callback)` [deprecated] Start all services.
+
+### Events
+* start(name) Service *name* has started
+* stop(name) Service *name* has stopped
