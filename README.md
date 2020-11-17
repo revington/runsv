@@ -23,13 +23,17 @@ const http = require('http');
 const runsv = require('runsv').create();
 const req = http.IncomingMessage.prototype;
 // Require your defined services
-const pg = require('./lib/pg-service');
-const redis = require('./lib/redis-service');
+const pg = require('./lib/pg-service')();
+const redis = require('./lib/redis-service')();
 const app = require('./app');
 // add them to runsv
 runsv.addService(pg);
 runsv.addService(redis);
 runsv.addService(app, pg, redis); // app requires pg and redis
+
+runsv.on('start', service => console.log(service, 'ready'));
+runsv.on('stop', service => console.log(service, 'stopped'));
+
 // start your services and wait until ready
 runsv.init(function (err) {
     if(err){
@@ -87,6 +91,7 @@ function create() {
         getClient
     });
 }
+exports = module.exports = create;
 ```
 
 See more service examples:
@@ -105,3 +110,7 @@ See more service examples:
 * `getClients(...only)` Get a bunch of clients, If no client is specified it returns all clients.
 * `init(callback)` Start all services.
 * `stop(callback)` Stop all services.
+
+### Events
+* start(name) Service *name* has started
+* stop(name) Service *name* has stopped
