@@ -54,13 +54,19 @@ RunSV.prototype.getClients = function getClients (...only) {
 	}
 	return ret;
 };
+RunSV.prototype.startPlan = function startPlan () {
+	return this.dependencies.overallOrder();
+};
 RunSV.prototype.init = function init (callback) {
+	return this.start();
+};
+RunSV.prototype.start = function start (callback) {
 	var i = 0;
 	const self = this;
 	assert(callback, 'callback is required');
 	let plan;
 	try {
-		plan = self.dependencies.overallOrder();
+		plan = self.startPlan();
 	} catch (e) {
 		// typically a circular dependency
 		return callback(e);
@@ -91,11 +97,14 @@ RunSV.prototype.init = function init (callback) {
 	}
 	next();
 };
+RunSV.prototype.stopPlan = function stopPlan () {
+	return this.dependencies.overallOrder().reverse(); // stop the services in reverse order
+};
 RunSV.prototype.stop = function stop (callback) {
 	var i = 0;
 	const self = this;
 	assert(callback, 'callback is required');
-	const plan = self.dependencies.overallOrder().reverse(); // stop the services in reverse order
+	const plan = self.stopPlan();
 
 	function next (err) {
 		const previous = plan[i - 1];

@@ -35,10 +35,12 @@ runsv.on('start', service => console.log(service, 'ready'));
 runsv.on('stop', service => console.log(service, 'stopped'));
 
 // start your services and wait until ready
-runsv.init(function (err) {
+runsv.start(function (err) {
     if(err){
-        // deal with it...
+        // 
     }
+
+
     process.once('SIGTERM', function(){
         runsv.stop();
     });
@@ -108,8 +110,9 @@ See more service examples:
 * `addService(service, [...dependencies])` Adds a service with optional dependencies.
 * `listServices()` Gets a list of services i.e `['pg', 'redis']`.
 * `getClients(...only)` Get a bunch of clients, If no client is specified it returns all clients.
-* `init(callback)` Start all services.
+* `start(callback)` Start all services.
 * `stop(callback)` Stop all services.
+* `init(callback)` [deprecated] Start all services.
 
 ### Events
 * start(name) Service *name* has started
