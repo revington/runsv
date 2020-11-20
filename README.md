@@ -96,6 +96,46 @@ function create() {
 exports = module.exports = create;
 ```
 
+## Async/Await support
+
+### Async Services
+
+Async start/stop interfaces in services are supported
+
+```javascript
+
+const myService = {
+	name: 'myService',
+	async start(deps){ /**/}
+	async stop(deps){ /**/}
+}
+runsv.addService(myService);
+
+```
+
+Async RunSV interface
+
+```javascript
+
+const runsv = require('runsv').create().async(); // use the async interface
+const myService = { /**/ }
+
+runsv.addService(myService);
+
+try{
+	await runsv.start();
+}catch(e){
+	bail(err);
+}
+
+async function bail(err){
+	await runsv.stop();
+}
+
+```
+
+
+
 See more service examples:
 
 * [CouchDB](/examples/couchdb-service.js)
@@ -112,6 +152,7 @@ See more service examples:
 * `getClients(...only)` Get a bunch of clients, If no client is specified it returns all clients.
 * `start(callback)` Start all services.
 * `stop(callback)` Stop all services.
+* `async()` returns an async/await interface
 * `init(callback)` [deprecated] Start all services.
 
 ### Events
