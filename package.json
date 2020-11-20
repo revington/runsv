@@ -8,7 +8,8 @@
     },
     "scripts": {
         "test": "nyc --reporter=html  mocha  --bail --timeout 10000 --check-leaks test",
-        "test-ci": "nyc mocha test  --timeout 10000  --check-leaks "
+        "test-ci": "nyc mocha test  --timeout 10000  --check-leaks",
+        "coverage": "nyc report --reporter=text-lcov | coveralls"
     },
     "keywords": [],
     "author": "Pedro Narciso García Revington <p.revington@gmail.com> (https://github.com/revington)",
